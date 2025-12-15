@@ -13,6 +13,7 @@ create table public.articles (
   cover_image_url text,
   gallery_image_urls text[], 
   pdf_url text,
+  downloads integer default 0,
   views integer default 0,
   is_featured boolean default false,
   created_at timestamp with time zone default timezone('utc'::text, now()),
@@ -39,5 +40,17 @@ create table public.users (
   email text unique not null,
   password_hash text not null,
   role text default 'admin',
+  created_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+-- Table Comments
+create table public.comments (
+  id uuid default uuid_generate_v4() primary key,
+  article_id uuid references public.articles(id) on delete cascade,
+  parent_id uuid references public.comments(id) on delete cascade,
+  author_name text not null,
+  email text,
+  content text not null,
+  likes integer default 0,
   created_at timestamp with time zone default timezone('utc'::text, now())
 );

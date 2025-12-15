@@ -4,9 +4,16 @@ const articleController = require('../controllers/articleController');
 const upload = require('../middlewares/uploadMiddleware');
 const authMiddleware = require('../middlewares/authMiddleware');
 
+const commentController = require('../controllers/commentController');
+
 // Public Routes
 router.get('/', articleController.getAllArticles);
 router.get('/:id', articleController.getArticleById);
+router.post('/:id/download', articleController.incrementDownloads);
+
+// Comments specific routes (Nested resource)
+router.get('/:articleId/comments', commentController.getCommentsByArticle);
+router.post('/:articleId/comments', commentController.addComment);
 
 // Protected Routes (Admin only)
 const articleUploads = upload.fields([

@@ -130,17 +130,40 @@ exports.createArticle = async (req, res) => {
 
 exports.updateArticle = async (req, res) => {
     const { id } = req.params;
+
+    // Start with text fields from body
     const updates = { ...req.body };
 
-    // Clean up files usage if strictly sending strings (e.g. keeping old URLs)
-    // If new files are uploaded, process them similarly to Create
-    // NOTE: simplistic implementation here.
+    // We explicitly remove file fields from 'updates' if they came in as text (e.g. "null" or "[object Object]") 
+    // to prevent corrupting the DB with non-URL strings.
+    delete updates.cover_image;
+    delete updates.gallery_images;
+    delete updates.pdf_file;
 
     try {
-        if (req.files['cover_image']) {
-            updates.cover_image_url = await uploadToImageKit(req.files['cover_image'][0].buffer, `cover_${Date.now()}`);
+        // Handle Cover Image
+        if (req.files && req.files['cover_image']) {
+            updates.cover_image_url = await uploadToImageKit(
+                req.files['cover_image'][0].buffer,
+                `cover_${Date.now()}`
+            );
         }
-        // Logic for appending or replacing gallery images would go here
+
+        // Handle Gallery Images
+        // If new gallery images are uploaded, we replace the existing gallery.
+        if (req.files && req.files['gallery_images']) {
+            const newGalleryUrls = [];
+            for (const file of req.files['gallery_images']) {
+                const url = await uploadToImageKit(file.buffer, `gallery_${Date.now()}`);
+                newGalleryUrls.push(url);
+            }
+            updates.gallery_image_urls = newGalleryUrls;
+        }
+
+        // Handle PDF
+        if (req.files && req.files['pdf_file']) {
+            updates.pdf_url = await uploadToCloudinary(req.files['pdf_file'][0].buffer);
+        }
 
         const { data, error } = await supabase
             .from('articles')
@@ -151,6 +174,7 @@ exports.updateArticle = async (req, res) => {
         if (error) throw error;
         res.json(data[0]);
     } catch (err) {
+        console.error("Update Error:", err);
         res.status(500).json({ error: err.message });
     }
 };
@@ -160,4 +184,35 @@ exports.deleteArticle = async (req, res) => {
     const { error } = await supabase.from('articles').delete().eq('id', id);
     if (error) return res.status(500).json({ error: error.message });
     res.json({ message: 'Article deleted' });
+};
+
+exports.incrementDownloads = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        // Fetch current downloads
+        const { data: article, error: fetchError } = await supabase
+            .from('articles')
+            .select('downloads')
+            .eq('id', id)
+            .single();
+
+        if (fetchError) return res.status(404).json({ error: 'Article not found' });
+
+        const newDownloads = (article.downloads || 0) + 1;
+
+        const { data, error } = await supabase
+            .from('articles')
+            .update({ downloads: newDownloads })
+            .eq('id', id)
+            .select() // return updated record
+            .single();
+
+        if (error) throw error;
+
+        res.json({ downloads: data.downloads });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
 };
