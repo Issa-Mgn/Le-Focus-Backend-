@@ -26,6 +26,21 @@ app.get('/', (req, res) => {
     res.send('Serveur Backend Le Focus est en ligne ! Utiliser /api/articles ou /api/orders');
 });
 
+// Health Check endpoint pour UptimeRobot
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'OK',
+        message: 'Le Focus Backend is running',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
+});
+
+// Endpoint alternatif pour ping
+app.get('/ping', (req, res) => {
+    res.send('pong');
+});
+
 // Global Error Handler
 app.use((err, req, res, next) => {
     console.error(err.stack);
