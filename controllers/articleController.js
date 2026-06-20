@@ -92,10 +92,20 @@ exports.createArticle = async (req, res) => {
 
         // Handle Gallery Images
         if (req.files['gallery_images']) {
+            // Valider qu'il y a entre 1 et 3 images
+            if (req.files['gallery_images'].length < 1) {
+                return res.status(400).json({ error: 'Au moins 1 image est requise.' });
+            }
+            if (req.files['gallery_images'].length > 3) {
+                return res.status(400).json({ error: 'Maximum 3 images autorisées.' });
+            }
+            
             for (const file of req.files['gallery_images']) {
                 const url = await uploadToImageKit(file.buffer, `gallery_${Date.now()}`);
                 gallery_image_urls.push(url);
             }
+        } else {
+            return res.status(400).json({ error: 'Au moins 1 image est requise pour créer un article.' });
         }
 
         // Handle PDF
@@ -152,6 +162,14 @@ exports.updateArticle = async (req, res) => {
         // Handle Gallery Images
         // If new gallery images are uploaded, we replace the existing gallery.
         if (req.files && req.files['gallery_images']) {
+            // Valider qu'il y a entre 1 et 3 images
+            if (req.files['gallery_images'].length < 1) {
+                return res.status(400).json({ error: 'Au moins 1 image est requise.' });
+            }
+            if (req.files['gallery_images'].length > 3) {
+                return res.status(400).json({ error: 'Maximum 3 images autorisées.' });
+            }
+            
             const newGalleryUrls = [];
             for (const file of req.files['gallery_images']) {
                 const url = await uploadToImageKit(file.buffer, `gallery_${Date.now()}`);
